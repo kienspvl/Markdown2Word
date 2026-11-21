@@ -1,0 +1,1918 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Markdown & Math to Word Converter - Icarus</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/contrib/auto-render.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        textarea, input {
+            -webkit-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+        .math-container { overflow-x: auto; padding: 6px 0; margin: 8px 0; }
+        .math-inline { display: inline-block; margin: 0 3px; }
+        #toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 9999; display: flex; flex-direction: column; gap: 10px; }
+        .toast { transform: translateY(20px); opacity: 0; transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
+        .toast.show { transform: translateY(0); opacity: 1; }
+        .modal-bg { background-color: rgba(0, 0, 0, 0.5); backdrop-filter: blur(2px); }
+        .markdown-body h1 { font-size: 1.75rem; font-weight: 700; margin-top: 1rem; margin-bottom: 0.5rem; color: #0f172a; }
+        .markdown-body h2 { font-size: 1.5rem; font-weight: 700; margin-top: 0.875rem; margin-bottom: 0.5rem; color: #1e293b; }
+        .markdown-body h3 { font-size: 1.25rem; font-weight: 700; margin-top: 0.75rem; margin-bottom: 0.375rem; color: #1e293b; }
+        .markdown-body h4 { font-size: 1.1rem; font-weight: 700; margin-top: 0.65rem; margin-bottom: 0.3rem; color: #334155; }
+        .markdown-body h5 { font-size: 1rem; font-weight: 700; margin-top: 0.55rem; margin-bottom: 0.25rem; color: #333333; }
+        .markdown-body h6 { font-size: 0.925rem; font-weight: 700; margin-top: 0.5rem; margin-bottom: 0.25rem; color: #475569; }
+        .markdown-body p { margin-bottom: 0.75rem; line-height: 1.6; }
+        .markdown-body ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        .markdown-body ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 0.75rem; }
+        .markdown-body code { background-color: #f3f4f6; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: monospace; font-size: 0.875rem; }
+        .markdown-body pre { background-color: #1f2937; color: #f9fafb; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 0.75rem; }
+        .markdown-body pre code { background-color: transparent; color: inherit; padding: 0; }
+        .markdown-body blockquote { border-left: 4px solid #3b82f6; padding-left: 1rem; color: #4b5563; font-style: italic; margin-bottom: 0.75rem; }
+        .markdown-body table { border-collapse: collapse; width: 100%; margin-bottom: 0.75rem; }
+        .markdown-body th, .markdown-body td { border: 1px solid #cbd5e1; padding: 0.4rem 0.6rem; text-align: left; }
+        .markdown-body th { background-color: #f1f5f9; font-weight: 600; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen flex flex-col justify-between" oncontextmenu="return false;" ondragstart="return false;">
+
+    <div id="toast-container"></div>
+
+    <div id="modalHistory" onclick="if(event.target === this) toggleModal('modalHistory', false)" class="fixed inset-0 modal-bg z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 overflow-hidden border border-slate-100 transform transition-all">
+            <div class="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="font-bold text-lg flex items-center gap-2"><span>📜</span> Lịch sử cập nhật ứng dụng</h3>
+                <button onclick="toggleModal('modalHistory', false)" class="text-indigo-200 hover:text-white text-xl font-bold">&times;</button>
+            </div>
+            <div class="p-6 space-y-4 max-h-[70vh] overflow-y-auto text-sm text-slate-700">
+                <div class="border-l-4 border-emerald-600 pl-3">
+                    <p class="font-semibold text-emerald-900">Phiên bản 3.2 (Hiện tại - Isolated Export Token Cleaner)</p>
+                    <p class="text-xs text-slate-500">Tháng 11/2026</p>
+                </div>
+                <div class="border-l-4 border-emerald-500 pl-3">
+                    <p class="font-semibold text-emerald-900">Phiên bản 3.1 (Dual-Channel Clipboard + Native OMML .docx)</p>
+                    <p class="text-xs text-slate-500">Tháng 11/2026</p>
+                </div>
+                <div class="border-l-4 border-emerald-400 pl-3">
+                    <p class="font-semibold text-emerald-800">Phiên bản 3.0 (Native OMML Engine)</p>
+                    <p class="text-xs text-slate-500">Tháng 11/2026</p>
+                </div>
+            </div>
+            <div class="bg-slate-50 px-6 py-3 flex justify-end">
+                <button onclick="toggleModal('modalHistory', false)" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalAuthor" onclick="if(event.target === this) toggleModal('modalAuthor', false)" class="fixed inset-0 modal-bg z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden border border-slate-100 transform transition-all">
+            <div class="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center">
+                <h3 class="font-bold text-lg flex items-center gap-2"><span>🌸</span> Thông tin Tác giả</h3>
+                <button onclick="toggleModal('modalAuthor', false)" class="text-indigo-200 hover:text-white text-xl font-bold">&times;</button>
+            </div>
+            <div class="p-6 space-y-4 text-slate-700">
+                <div class="flex items-center gap-4 bg-indigo-50 p-4 rounded-xl">
+                    <div class="w-14 h-14 bg-indigo-600 text-white rounded-full flex items-center justify-center text-2xl font-bold shadow-inner">
+                        I
+                    </div>
+                    <div>
+                        <h4 class="font-bold text-indigo-900 text-base">Tác giả: Icarus</h4>
+                        <span class="inline-block bg-indigo-200 text-indigo-800 text-xs px-2 py-0.5 rounded-full font-medium mt-1">Developer &amp; Creator</span>
+                    </div>
+                </div>
+                <div class="space-y-2 text-sm">
+                    <p class="flex items-center gap-2"><strong>📧 Email:</strong> <a href="mailto:kienspvl@gmail.com" class="text-indigo-600 hover:underline">kienspvl@gmail.com</a></p>
+                    <p class="flex items-center gap-2"><strong>📞 Điện thoại:</strong> <span class="font-mono bg-slate-100 px-2 py-0.5 rounded text-slate-800">097 463 87 94</span></p>
+                </div>
+                <div class="border-t border-slate-100 pt-3">
+                    <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">Ủng hộ nhà phát triển:</p>
+                    <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs space-y-1">
+                        <p><strong>Ngân hàng:</strong> Techcombank</p>
+                        <p><strong>Số tài khoản:</strong> <span class="font-mono font-bold text-indigo-700">1903 2723 2240 12</span></p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-slate-50 px-6 py-3 flex justify-end">
+                <button onclick="toggleModal('modalAuthor', false)" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition shadow">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modalExportName" onclick="if(event.target === this) toggleModal('modalExportName', false)" class="fixed inset-0 modal-bg z-50 flex items-center justify-center hidden">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 overflow-hidden border border-slate-100 transform transition-all">
+            <div class="bg-indigo-700 text-white px-6 py-4 flex justify-between items-center">
+                <h3 id="modalExportTitle" class="font-bold text-lg flex items-center gap-2"><span>💾</span> Đặt tên file Word (.docx OMML)</h3>
+                <button onclick="toggleModal('modalExportName', false)" class="text-indigo-200 hover:text-white text-xl font-bold">&times;</button>
+            </div>
+            <div class="p-6 space-y-4 text-slate-700">
+                <div>
+                    <label for="fileNameInput" class="block text-xs font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Tên file xuất:</label>
+                    <input type="text" id="fileNameInput" 
+                        onkeydown="if(event.key === 'Enter') { event.preventDefault(); confirmExportToWord(); }"
+                        class="w-full p-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 text-sm font-mono text-slate-800"
+                        placeholder="Nhập tên file...">
+                    <p class="text-xs text-slate-400 mt-1">Đuôi `.docx` (chuẩn OpenXML OMML &lt;m:oMath&gt;) sẽ được tự động thêm. Nhấn <strong>Enter</strong> để lưu ngay.</p>
+                </div>
+            </div>
+            <div class="bg-slate-50 px-6 py-3 flex justify-end gap-2">
+                <button onclick="toggleModal('modalExportName', false)" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-xl text-sm font-medium transition">Hủy</button>
+                <button onclick="confirmExportToWord()" class="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-xl text-sm font-medium transition shadow">Xác nhận Xuất</button>
+            </div>
+        </div>
+    </div>
+
+    <header class="bg-indigo-700 text-white shadow-md py-3 px-4 sm:px-6">
+        <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-3">
+            <div>
+                <div class="flex items-center gap-2">
+                    <h1 class="text-xl sm:text-2xl font-bold flex items-center gap-2">
+                        <span>📐</span> Markdown &amp; Math to Word Converter
+                    </h1>
+                    <span class="bg-emerald-500 text-white text-xs px-2.5 py-0.5 rounded-full font-semibold border border-emerald-400 shadow-sm">
+                        Icarus
+                    </span>
+                </div>
+                <p class="text-indigo-200 text-xs sm:text-sm mt-0.5">Tương thích mọi phiên bản Word.</p>
+            </div>
+            <div class="flex flex-wrap items-center gap-2">
+                <button onclick="toggleModal('modalHistory', true)" title="Lịch sử cập nhật" class="bg-indigo-800 hover:bg-indigo-600 text-white w-9 h-9 rounded-lg text-sm font-bold transition shadow flex items-center justify-center border border-indigo-600">
+                    u
+                </button>
+                <button onclick="toggleModal('modalAuthor', true)" class="bg-pink-600 hover:bg-pink-500 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition shadow flex items-center gap-1.5 border border-pink-500">
+                    🌸 はな One Day
+                </button>
+                <input type="file" id="fileInput" accept=".md,.txt" class="hidden" onchange="importFile(event)">
+                <button onclick="document.getElementById('fileInput').click()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition shadow flex items-center gap-1.5">
+                    📂 Import
+                </button>
+                <button onclick="loadSample()" class="bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition shadow">
+                    💡 Mẫu
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-grow max-w-7xl w-full mx-auto p-4 sm:p-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div class="flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-slate-100 px-4 py-2.5 border-b border-slate-200 flex justify-between items-center gap-2">
+                <span class="font-semibold text-slate-700 text-xs sm:text-sm">📝 Soạn thảo &amp; Chuẩn hóa AI Markdown</span>
+                <div class="flex items-center gap-3 shrink-0">
+                    <label class="inline-flex items-center gap-2 cursor-pointer select-none text-xs font-medium text-slate-700" title="Tự động sửa cú pháp \\[ \\] và \\( \\) bị lỗi escaped thành \[ \] và \( \) giúp KaTeX hiển thị đúng công thức">
+                        <input type="checkbox" id="fix-backslash-toggle" checked onchange="updatePreview()" class="sr-only peer">
+                        <span>Sửa \\[ \\(</span>
+                        <span class="relative inline-block w-8 h-4 shrink-0 bg-slate-300 rounded-full transition-colors duration-200 peer-checked:bg-indigo-600 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-3 after:h-3 after:bg-white after:rounded-full after:shadow-sm after:transition-transform after:duration-200 peer-checked:after:translate-x-4"></span>
+                    </label>
+                    <span id="charCount" class="text-xs text-slate-500">0 ký tự</span>
+                </div>
+            </div>
+            <textarea id="markdownInput" 
+                class="flex-grow w-full p-4 resize-none focus:outline-none font-mono text-sm leading-relaxed text-slate-800 min-h-[450px]"
+                placeholder="Dán nội dung Markdown hoặc công thức LaTeX trả về từ AI vào đây..."
+                oninput="updatePreview()"></textarea>
+        </div>
+
+        <div class="flex flex-col bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+            <div class="bg-slate-100 px-4 py-2.5 border-b border-slate-200 flex flex-wrap justify-between items-center gap-2">
+                <span class="font-semibold text-slate-700 text-xs sm:text-sm">👁️ Xem trước định dạng &amp; Công thức</span>
+                <div class="flex flex-wrap items-center gap-2 shrink-0">
+                    <label class="inline-flex items-center gap-1.5 cursor-pointer select-none text-xs font-medium text-slate-700 bg-white px-2 py-1 rounded-md border border-slate-200 shadow-2xs" title="Bật để tự động chèn khoảng trắng đệm trước và sau mỗi công thức nội dòng">
+                        <input type="checkbox" id="auto-space-toggle" checked onchange="toggleAutoSpace()" class="sr-only peer">
+                        <span>+ Space</span>
+                        <span class="relative inline-block w-8 h-4 shrink-0 bg-slate-300 rounded-full transition-colors duration-200 peer-checked:bg-amber-500 after:content-[''] after:absolute after:top-0.5 after:left-0.5 after:w-3 after:h-3 after:bg-white after:rounded-full after:shadow-sm after:transition-transform after:duration-200 peer-checked:after:translate-x-4"></span>
+                    </label>
+                    <button onclick="cleanAndCopyToWord()" title="Dọn sạch 2+ dấu cách liên tiếp, dấu cách sau ( hoặc [ và trước dấu câu trên bản xem trước rồi copy vào Clipboard Word" class="text-xs bg-sky-600 hover:bg-sky-500 text-white px-2.5 py-1 rounded transition font-medium flex items-center gap-1">
+                        ✨ Clean &amp; Copy
+                    </button>
+                    <button onclick="copyToWord()" class="text-xs bg-emerald-600 hover:bg-emerald-500 text-white px-2.5 py-1 rounded transition font-medium flex items-center gap-1">
+                        📋 Copy Word
+                    </button>
+                    <button onclick="openExportModal(true)" title="Dọn sạch khoảng trắng thừa sau khi render rồi xuất trực tiếp ra file .docx chứa OMML" class="text-xs bg-violet-600 hover:bg-violet-500 text-white px-2.5 py-1 rounded transition font-medium flex items-center gap-1">
+                        ✨ Clean &amp; Export
+                    </button>
+                    <button onclick="openExportModal(false)" class="text-xs bg-amber-600 hover:bg-amber-500 text-white px-2.5 py-1 rounded transition font-medium flex items-center gap-1">
+                        💾 Xuất .docx
+                    </button>
+                </div>
+            </div>
+            <div id="preview" class="flex-grow p-6 overflow-y-auto markdown-body max-w-none text-slate-800 bg-white min-h-[450px]">
+            </div>
+        </div>
+    </main>
+
+    <footer class="bg-white border-t border-slate-200 py-3 px-6 text-center text-xs text-slate-500 flex flex-col sm:flex-row justify-center items-center gap-2">
+        <span>Author: Icarus</span>
+        <span class="hidden sm:inline">•</span>
+        <span>Email: kienspvl@gmail.com</span>
+        <span class="hidden sm:inline">•</span>
+        <span>Phone: 097.463.87.94</span>
+    </footer>
+
+    <script>
+        (function() {
+            document.addEventListener('contextmenu', function(e) {
+                e.preventDefault();
+            });
+            document.addEventListener('copy', function(e) {
+                const active = document.activeElement;
+                if (!active || (active.tagName !== 'TEXTAREA' && active.tagName !== 'INPUT')) {
+                    e.preventDefault();
+                }
+            });
+            document.addEventListener('cut', function(e) {
+                const active = document.activeElement;
+                if (!active || (active.tagName !== 'TEXTAREA' && active.tagName !== 'INPUT')) {
+                    e.preventDefault();
+                }
+            });
+            document.addEventListener('selectstart', function(e) {
+                if (e.target && (e.target.tagName === 'TEXTAREA' || e.target.tagName === 'INPUT')) {
+                    return true;
+                }
+                e.preventDefault();
+            });
+            document.addEventListener('keydown', function(e) {
+                const key = (e.key || '').toLowerCase();
+                if (e.key === 'F12') {
+                    e.preventDefault();
+                    return false;
+                }
+                if ((e.ctrlKey || e.metaKey) && e.shiftKey && ['i', 'j', 'c', 'k'].includes(key)) {
+                    e.preventDefault();
+                    return false;
+                }
+                if ((e.ctrlKey || e.metaKey) && ['u', 's', 'p'].includes(key)) {
+                    e.preventDefault();
+                    return false;
+                }
+                if ((e.ctrlKey || e.metaKey) && key === 'a') {
+                    const active = document.activeElement;
+                    if (!active || (active.tagName !== 'TEXTAREA' && active.tagName !== 'INPUT')) {
+                        e.preventDefault();
+                        return false;
+                    }
+                }
+            });
+        })();
+
+        let shouldCleanBeforeExport = false;
+
+        const sampleMarkdown = `# **12 PHƯƠNG TRÌNH VẬT LÝ QUAN TRỌNG NHẤT**
+
+Tổng hợp các phương trình đặt nền móng cho cơ học, điện động lực học, nhiệt động lực học và vật lý hiện đại.
+
+## **I. Cơ học cổ điển & Hấp dẫn**
+
+### **1. Định luật II Newton**
+Mối quan hệ giữa lực, khối lượng và gia tốc của vật:
+$$ \\vec{F} = \\frac{d}{dt}(m\\vec{v}) = m\\vec{a} $$
+
+#### **1.1. Trường hợp khối lượng không đổi**
+Khi khối lượng $m$ không thay đổi theo thời gian (ví dụ nghiệm $x\\_{1,2}$, khối lượng $m = 2\\,\\text{kg}$ và gia tốc $a = 5\\,\\text{m/s}^2$), phương trình rút gọn thành:
+$$ \\vec{F} = m\\vec{a} $$
+
+### **2. Định luật vạn vật hấp dẫn của Newton**
+Lực hấp dẫn giữa hai vật có khối lượng $m_1$ và $m_2$ cách nhau một khoảng $r$:
+$$ F = G \\frac{m_1 m_2}{r^2} $$
+
+---
+
+## **II. Nhiệt động lực học & Thống kê**
+
+### **3. Phương trình trạng thái khí lý tưởng**
+Mối liên hệ giữa áp suất $p$, thể tích $V$ và nhiệt độ tuyệt đối $T$ của lượng khí:
+$$ pV = nRT $$
+
+### **4. Định luật phân bố Boltzmann**
+Xác suất trạng thái năng lượng $E$ ở nhiệt độ tuyệt đối $T$:
+$$ P(E) \\propto e^{-\\frac{E}{kT}} $$
+
+---
+
+## **III. Điện động lực học & Sóng**
+
+### **5. Phương trình Maxwell (Dạng vi phân)**
+Hệ phương trình mô tả trường điện từ và sự tương tác với điện tích, dòng điện:
+$$ \\nabla \\cdot \\vec{E} = \\frac{\\rho}{\\varepsilon_0}, \\quad \\nabla \\cdot \\vec{B} = 0 $$
+$$ \\nabla \\times \\vec{E} = -\\frac{\\partial \\vec{B}}{\\partial t}, \\quad \\nabla \\times \\vec{B} = \\mu_0\\vec{j} + \\mu_0\\varepsilon_0\\frac{\\partial \\vec{E}}{\\partial t} $$
+
+### **6. Phương trình sóng điện từ**
+Phương trình truyền sóng điện từ trong chân không với tốc độ ánh sáng $c$:
+$$ \\nabla^2 \\vec{E} = \\mu_0 \\varepsilon_0 \\frac{\\partial^2 \\vec{E}}{\\partial t^2} $$
+
+---
+
+## **IV. Thuyết tương đối & Cơ học lượng tử**
+
+### **7. Hệ thức Anh-xtanh (Năng lượng - Khối lượng)**
+Năng lượng toàn phần của vật ở trạng thái nghỉ:
+$$ E = mc^2 $$
+
+### **8. Phương trình Schrödinger (Cơ học lượng tử)**
+Phương trình cơ bản mô tả sự biến đổi theo thời gian của trạng thái lượng tử hàm sóng $\\Psi$:
+$$ i\\hbar \\frac{\\partial \\Psi}{\\partial t} = \\hat{H} \\Psi $$
+
+### **9. Nguyên lý bất định Heisenberg**
+Giới hạn đồng thời về độ chính xác khi đo vị trí $x$ và động lượng $p$:
+$$ \\Delta x \\Delta p \\ge \\frac{\\hbar}{2} $$
+
+### **10. Đạo hàm bậc hai thế năng Lennard-Jones**
+$$\\frac{d^2V}{dr^2} = \\frac{d}{dr} \\left\\{ \\frac{24\\epsilon}{\\sigma} \\left[ -2 \\sigma^{13} r^{-13} + \\sigma^7 r^{-7} \\right] \\right\\}$$
+$$\\frac{d^2V}{dr^2} = \\frac{24\\epsilon}{\\sigma} \\left[ 26 \\sigma^{13} r^{-14} - 7 \\sigma^7 r^{-8} \\right] = \\frac{24\\epsilon}{\\sigma^2} \\left[ 26 \\left(\\frac{\\sigma}{r}\\right)^{14} - 7 \\left(\\frac{\\sigma}{r}\\right)^8 \\right]$$
+
+### **11. Tích phân, Căn thức & Hệ phương trình**
+$$ I = \\int_{0}^{\\infty} e^{-x^2} dx = \\frac{\\sqrt{\\pi}}{2}, \\quad x_{1,2} = \\frac{-b \\pm \\sqrt{b^2 - 4ac}}{2a} $$
+$$ \\begin{cases} x + y = 5 \\\\ 2x - y = 1 \\end{cases} \\implies \\begin{pmatrix} x \\\\ y \\end{pmatrix} = \\begin{pmatrix} 2 \\\\ 3 \\end{pmatrix} $$
+`;
+
+        window.onload = function() {
+            document.getElementById('markdownInput').value = sampleMarkdown;
+            updatePreview();
+        };
+
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                ['modalHistory', 'modalAuthor', 'modalExportName'].forEach(id => {
+                    const modal = document.getElementById(id);
+                    if (modal && !modal.classList.contains('hidden')) {
+                        toggleModal(id, false);
+                    }
+                });
+            }
+        });
+
+        function toggleModal(modalId, show) {
+            const modal = document.getElementById(modalId);
+            if (show) modal.classList.remove('hidden');
+            else modal.classList.add('hidden');
+        }
+
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            const bgClass = type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-indigo-600';
+            toast.className = `toast ${bgClass} text-white px-4 py-3 rounded-xl shadow-lg text-xs sm:text-sm font-medium flex items-center gap-2`;
+            toast.innerHTML = `<span>${type === 'success' ? '✅' : type === 'error' ? '⚠️' : 'ℹ️'}</span> <span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3200);
+        }
+
+        function normalizeMathExpression(expr) {
+            let normalized = expr;
+            normalized = normalized.replace(/\\text\{đ([a-zA-Z0-9]*)\}/g, '\\text{d}$1');
+            normalized = normalized.replace(/_\{đ\}/g, '_d');
+            normalized = normalized.replace(/\\text\{đ\}/g, '\\text{d}');
+            normalized = normalized.replace(/\\+_/g, '_');
+            normalized = normalized.replace(/\\\\,/g, '\\,');
+            normalized = normalized.replace(/\\text\{([^{}]*)\}/g, (_, textInner) => {
+                return `\\text{${textInner.replace(/\\,/g, ' ')}}`;
+            });
+            return normalized;
+        }
+
+        function preprocessAIFormats(text) {
+            let processed = text;
+            const fixBackslashToggle = document.getElementById('fix-backslash-toggle');
+            if (fixBackslashToggle && fixBackslashToggle.checked) {
+                processed = processed.replace(/\\\\\[/g, '\\[');
+                processed = processed.replace(/\\\\\]/g, '\\]');
+                processed = processed.replace(/\\\\\(/g, '\\(');
+                processed = processed.replace(/\\\\\)/g, '\\)');
+            }
+            processed = processed.replace(/\\begin\{equation\*?\}([\s\S]*?)\\end\{equation\*?\}/g, (_, body) => `$$${body}$$`);
+            processed = processed.replace(/\\begin\{align\*?\}([\s\S]*?)\\end\{align\*?\}/g, (_, body) => `$$\\begin{aligned}${body}\\end{aligned}$$`);
+            processed = processed.replace(/\\begin\{gather\*?\}([\s\S]*?)\\end\{gather\*?\}/g, (_, body) => `$$\\begin{gathered}${body}\\end{gathered}$$`);
+            processed = processed.replace(/\\begin\{math\}([\s\S]*?)\\end\{math\}/g, (_, body) => `$${body}$`);
+            processed = processed.replace(/```(?:math|latex|katex)?\s*([\s\S]*?)\s*```/g, (_, body) => `$$\n${body}\n$$`);
+            return processed;
+        }
+
+        function renderMarkdownAndMath(rawMarkdown) {
+            const preprocessed = preprocessAIFormats(rawMarkdown);
+            const mathTokens = [];
+            const mathPattern = /(\$\$[\s\S]*?\$\$|\\\[[\s\S]*?\\\]|\\\([\s\S]*?\\\)|(?:^|[^\\$])\$(?!\$)(?:\\[\s\S]|[^$\n])+?\$(?!\$))/g;
+
+            const shieldedText = preprocessed.replace(mathPattern, (fullMatch) => {
+                const dollarIndex = fullMatch.indexOf('$');
+                const prefix = dollarIndex > 0 && !fullMatch.startsWith('$$') && !fullMatch.startsWith('\\[') && !fullMatch.startsWith('\\(')
+                    ? fullMatch.slice(0, dollarIndex)
+                    : '';
+                const match = prefix ? fullMatch.slice(prefix.length) : fullMatch;
+
+                let delimiterLeft = '';
+                let delimiterRight = '';
+                let inner = match;
+                let isDisplayBlock = false;
+
+                if (match.startsWith('$$') && match.endsWith('$$')) {
+                    delimiterLeft = '$$'; delimiterRight = '$$'; inner = match.slice(2, -2); isDisplayBlock = true;
+                } else if (match.startsWith('\\[') && match.endsWith('\\]')) {
+                    delimiterLeft = '\\['; delimiterRight = '\\]'; inner = match.slice(2, -2); isDisplayBlock = true;
+                } else if (match.startsWith('\\(') && match.endsWith('\\)')) {
+                    delimiterLeft = '\\('; delimiterRight = '\\)'; inner = match.slice(2, -2);
+                } else if (match.startsWith('$') && match.endsWith('$')) {
+                    delimiterLeft = '$'; delimiterRight = '$'; inner = match.slice(1, -1);
+                }
+
+                const cleanedInner = normalizeMathExpression(inner);
+                const tokenId = `MATHTOKEN${mathTokens.length}ENDTOKEN`;
+                mathTokens.push(`${delimiterLeft}${cleanedInner}${delimiterRight}`);
+                return isDisplayBlock ? `${prefix}\n\n${tokenId}\n\n` : `${prefix}${tokenId}`;
+            });
+
+            let htmlResult = marked.parse(shieldedText);
+            htmlResult = htmlResult.replace(/\\\\?,/g, '\u2009');
+
+            mathTokens.forEach((originalExpr, idx) => {
+                const tokenId = `MATHTOKEN${idx}ENDTOKEN`;
+                htmlResult = htmlResult.split(tokenId).join(originalExpr);
+            });
+
+            return htmlResult;
+        }
+
+        function updatePreview() {
+            const markdownText = document.getElementById('markdownInput').value;
+            document.getElementById('charCount').innerText = `${markdownText.length} ký tự`;
+
+            if (!markdownText.trim()) {
+                document.getElementById('preview').innerHTML = '<span class="text-slate-400 italic">Kết quả hiển thị sẽ xuất hiện ở đây...</span>';
+                return;
+            }
+
+            const previewEl = document.getElementById('preview');
+            previewEl.innerHTML = renderMarkdownAndMath(markdownText);
+
+            renderMathInElement(previewEl, {
+                delimiters: [
+                    {left: '$$', right: '$$', display: true},
+                    {left: '$', right: '$', display: false},
+                    {left: '\\[', right: '\\]', display: true},
+                    {left: '\\(', right: '\\)', display: false}
+                ],
+                output: 'htmlAndMathml',
+                throwOnError: false
+            });
+
+            applySpacePreference();
+        }
+
+        function applySpacePreference() {
+            const previewEl = document.getElementById('preview');
+            const autoSpaceToggle = document.getElementById('auto-space-toggle');
+            previewEl.querySelectorAll('.katex-space-guard').forEach(guard => guard.remove());
+
+            if (!autoSpaceToggle || !autoSpaceToggle.checked) return;
+
+            const katexElements = previewEl.querySelectorAll('.katex:not(.katex-display)');
+            katexElements.forEach(el => {
+                const prev = el.previousSibling;
+                let needSpaceBefore = !prev || (prev.nodeType === Node.TEXT_NODE && /[a-zA-Z0-9À-ỹ]$/.test(prev.textContent));
+                if (needSpaceBefore) {
+                    const spaceBefore = document.createElement('span');
+                    spaceBefore.className = 'katex-space-guard';
+                    spaceBefore.innerHTML = '&nbsp;';
+                    el.parentNode.insertBefore(spaceBefore, el);
+                }
+
+                const next = el.nextSibling;
+                let needSpaceAfter = !next || (next.nodeType === Node.TEXT_NODE && /^[a-zA-Z0-9À-ỹ]/.test(next.textContent));
+                if (needSpaceAfter) {
+                    const spaceAfter = document.createElement('span');
+                    spaceAfter.className = 'katex-space-guard';
+                    spaceAfter.innerHTML = '&nbsp;';
+                    el.parentNode.insertBefore(spaceAfter, el.nextSibling);
+                }
+            });
+        }
+
+        function toggleAutoSpace() {
+            applySpacePreference();
+            const isChecked = document.getElementById('auto-space-toggle').checked;
+            showToast(isChecked ? 'Đã bật tự động chèn khoảng trắng đệm công thức.' : 'Đã tắt chèn khoảng trắng đệm công thức.', 'info');
+        }
+
+        function cleanRenderedSpaces(container) {
+            const closingPunctuationRegex = /^[\s\u00A0]*([.,;:!?)\]}…»”’])/;
+            const openingBracketRegex = /([(\[{«“])[\s\u00A0]*$/;
+
+            container.querySelectorAll('.katex-space-guard').forEach(guard => {
+                const next = guard.nextSibling;
+                const prev = guard.previousSibling;
+
+                if (next && next.nodeType === Node.TEXT_NODE && closingPunctuationRegex.test(next.textContent)) {
+                    guard.remove(); return;
+                }
+                if (prev && prev.nodeType === Node.TEXT_NODE && openingBracketRegex.test(prev.textContent)) {
+                    guard.remove(); return;
+                }
+                if ((prev && prev.nodeType === Node.TEXT_NODE && /[ \u00A0]$/.test(prev.textContent)) ||
+                    (next && next.nodeType === Node.TEXT_NODE && /^[ \u00A0]/.test(next.textContent))) {
+                    guard.remove();
+                }
+            });
+
+            const walker = document.createTreeWalker(container, NodeFilter.SHOW_TEXT, {
+                acceptNode: function(node) {
+                    if (!node.parentElement) return NodeFilter.FILTER_REJECT;
+                    if (node.parentElement.closest('.katex, pre, code')) return NodeFilter.FILTER_REJECT;
+                    return NodeFilter.FILTER_ACCEPT;
+                }
+            });
+
+            const textNodes = [];
+            let currentNode;
+            while ((currentNode = walker.nextNode())) textNodes.push(currentNode);
+
+            textNodes.forEach((node, index) => {
+                let text = node.nodeValue;
+                text = text.replace(/[ \u00A0]{2,}/g, ' ');
+                text = text.replace(/[ \u00A0]+([.,;:!?)\]}…»”’])/g, '$1');
+                text = text.replace(/([(\[{«“])[ \u00A0]+/g, '$1');
+
+                if (index > 0) {
+                    const prevNode = textNodes[index - 1];
+                    const prevBlock = prevNode.parentElement.closest('p, li, h1, h2, h3, h4, h5, h6, td, th, blockquote, div');
+                    const currBlock = node.parentElement.closest('p, li, h1, h2, h3, h4, h5, h6, td, th, blockquote, div');
+
+                    if (prevBlock && prevBlock === currBlock) {
+                        if (/[ \u00A0]$/.test(prevNode.nodeValue) && /^[ \u00A0]*[.,;:!?)\]}…»”’]/.test(text)) {
+                            prevNode.nodeValue = prevNode.nodeValue.replace(/[ \u00A0]+$/, '');
+                            text = text.replace(/^[ \u00A0]+/, '');
+                        } else if (/[(\[{«“]$/.test(prevNode.nodeValue) && /^[ \u00A0]+/.test(text)) {
+                            text = text.replace(/^[ \u00A0]+/, '');
+                        } else if (/[ \u00A0]$/.test(prevNode.nodeValue) && /^[ \u00A0]+/.test(text)) {
+                            text = text.replace(/^[ \u00A0]+/, '');
+                        }
+                    }
+                }
+                node.nodeValue = text;
+            });
+        }
+
+        function loadSample() {
+            document.getElementById('markdownInput').value = sampleMarkdown;
+            updatePreview();
+            showToast('Đã tải mẫu phương trình vật lý thành công!');
+        }
+
+        function importFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('markdownInput').value = e.target.result;
+                updatePreview();
+                showToast(`Đã import file thành công: ${file.name}`);
+            };
+            reader.readAsText(file);
+        }
+
+        function xmlEscape(str) {
+            if (str === null || str === undefined) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&apos;');
+        }
+
+        const UNICODE_ACCENT_MAP = {
+            '\u20D7': '\u20D7',
+            '\u2192': '\u20D7',
+            '\u005E': '\u0302',
+            '\u02C6': '\u0302',
+            '\u0302': '\u0302',
+            '\u007E': '\u0303',
+            '\u02DC': '\u0303',
+            '\u0303': '\u0303',
+            '\u00AF': '\u0304',
+            '\u02C9': '\u0304',
+            '\u0304': '\u0304',
+            '\u0305': '\u0305',
+            '\u02D9': '\u0307',
+            '\u0307': '\u0307',
+            '\u00A8': '\u0308',
+            '\u0308': '\u0308',
+            '\u02C7': '\u030C',
+            '\u030C': '\u030C',
+            '\u20D6': '\u20D6',
+            '\u2190': '\u20D6',
+            '\u20E1': '\u20E1',
+            '\u2194': '\u20E1'
+        };
+
+        const NARY_OPERATORS = new Set([
+            '\u2211', '\u220F', '\u2210', '\u222B', '\u222C', '\u222D',
+            '\u222E', '\u222F', '\u2230', '\u22C0', '\u22C1', '\u22C2',
+            '\u22C3', '\u2A00', '\u2A01', '\u2A02'
+        ]);
+
+        const LIMIT_FUNCTIONS = new Set([
+            'lim', 'liminf', 'limsup', 'max', 'min', 'sup', 'inf', 'arg', 'det', 'gcd', 'Pr'
+        ]);
+
+        function getElementChildren(node) {
+            return Array.from(node.childNodes).filter(n => n.nodeType === Node.ELEMENT_NODE);
+        }
+
+        function getCleanMathText(node) {
+            return (node.textContent || '').replace(/[\u200B\uFEFF]/g, '');
+        }
+
+        function wrapMathRun(text, opts = {}) {
+            if (!text) return '';
+            const cleanText = text.replace(/[\u200B\uFEFF]/g, '');
+            if (!cleanText) return '';
+
+            let rPr = '';
+            if (opts.nor) rPr += '<m:nor/>';
+            if (opts.sty) rPr += `<m:sty m:val="${opts.sty}"/>`;
+
+            let wRPr = '<w:rPr><w:rFonts w:ascii="Cambria Math" w:hAnsi="Cambria Math" w:cs="Cambria Math"/>';
+            if (opts.bold) wRPr += '<w:b/>';
+            if (opts.italic === false) wRPr += '<w:i w:val="0"/>';
+            wRPr += '</w:rPr>';
+
+            const mRPrXml = rPr ? `<m:rPr>${rPr}</m:rPr>` : '';
+            return `<m:r>${mRPrXml}${wRPr}<m:t xml:space="preserve">${xmlEscape(cleanText)}</m:t></m:r>`;
+        }
+
+        function getMathVariantOpts(el, defaultSty = null) {
+            const mv = el.getAttribute ? (el.getAttribute('mathvariant') || '') : '';
+            if (!mv) return defaultSty ? { sty: defaultSty } : {};
+            if (mv === 'normal') return { nor: true, sty: 'p' };
+            if (mv === 'bold') return { sty: 'b', bold: true };
+            if (mv === 'italic') return { sty: 'i' };
+            if (mv === 'bold-italic') return { sty: 'bi', bold: true };
+            if (['script', 'bold-script', 'fraktur', 'bold-fraktur', 'double-struck', 'sans-serif', 'monospace'].includes(mv)) {
+                return { sty: 'p' };
+            }
+            return {};
+        }
+
+        function isFencedRow(el) {
+            if (!el || el.nodeType !== Node.ELEMENT_NODE) return false;
+            const tag = el.localName.toLowerCase();
+            if (tag === 'mfenced') return true;
+            if (tag === 'mrow') {
+                const kids = getElementChildren(el);
+                if (kids.length >= 2) {
+                    const first = kids[0];
+                    const last = kids[kids.length - 1];
+                    const firstIsFence = first.localName.toLowerCase() === 'mo' &&
+                        (first.getAttribute('fence') === 'true' || ['(', '[', '{', '|', '‖', '⟨', '⌊', '⌈'].includes(getCleanMathText(first).trim()));
+                    const lastIsFence = last.localName.toLowerCase() === 'mo' &&
+                        (last.getAttribute('fence') === 'true' || [')', ']', '}', '|', '‖', '⟩', '⌋', '⌉'].includes(getCleanMathText(last).trim()));
+                    if (firstIsFence && lastIsFence) return true;
+                }
+            }
+            return false;
+        }
+
+        function isNaryOperatorNode(node) {
+            if (!node || node.nodeType !== Node.ELEMENT_NODE) return false;
+            const tag = node.localName.toLowerCase();
+            if (tag === 'mo') {
+                const txt = getCleanMathText(node).trim();
+                return NARY_OPERATORS.has(txt);
+            }
+            if (tag === 'mrow' || tag === 'mstyle') {
+                const kids = getElementChildren(node);
+                if (kids.length === 1) return isNaryOperatorNode(kids[0]);
+            }
+            return false;
+        }
+
+        function extractOperatorChar(node) {
+            return getCleanMathText(node).trim();
+        }
+
+        function convertChildrenToOmml(nodes, startIdx = 0) {
+            let out = '';
+            let i = startIdx;
+
+            while (i < nodes.length) {
+                const curr = nodes[i];
+                if (curr.nodeType !== Node.ELEMENT_NODE) {
+                    const txt = curr.textContent ? curr.textContent.trim() : '';
+                    if (txt) out += wrapMathRun(txt);
+                    i++;
+                    continue;
+                }
+
+                const tag = curr.localName.toLowerCase();
+
+                if (tag === 'msubsup' || tag === 'msub' || tag === 'msup' || tag === 'munderover' || tag === 'munder' || tag === 'mover') {
+                    const kids = getElementChildren(curr);
+                    if (kids.length > 0 && isNaryOperatorNode(kids[0])) {
+                        const naryChar = extractOperatorChar(kids[0]);
+                        let subXml = '';
+                        let supXml = '';
+                        let subHide = '1';
+                        let supHide = '1';
+                        const limLoc = (tag === 'munderover' || tag === 'munder' || tag === 'mover') ? 'undOvr' : 'subSup';
+
+                        if (tag === 'msub' || tag === 'munder') {
+                            subXml = `<m:sub>${convertMathNodeToOmml(kids[1])}</m:sub>`;
+                            subHide = '0';
+                        } else if (tag === 'msup' || tag === 'mover') {
+                            supXml = `<m:sup>${convertMathNodeToOmml(kids[1])}</m:sup>`;
+                            supHide = '0';
+                        } else if (tag === 'msubsup' || tag === 'munderover') {
+                            subXml = `<m:sub>${convertMathNodeToOmml(kids[1])}</m:sub>`;
+                            supXml = `<m:sup>${convertMathNodeToOmml(kids[2])}</m:sup>`;
+                            subHide = '0';
+                            supHide = '0';
+                        }
+
+                        const bodyNodes = [];
+                        let j = i + 1;
+                        while (j < nodes.length) {
+                            const nextEl = nodes[j];
+                            if (nextEl.nodeType === Node.ELEMENT_NODE && nextEl.localName.toLowerCase() === 'mo') {
+                                const opTxt = getCleanMathText(nextEl).trim();
+                                if (['=', '≠', '≈', '≡', '≤', '≥', '<', '>', '⇒', '⇔', '→', ','].includes(opTxt)) {
+                                    break;
+                                }
+                            }
+                            bodyNodes.push(nextEl);
+                            j++;
+                        }
+
+                        const bodyXml = bodyNodes.length > 0 ? convertChildrenToOmml(bodyNodes, 0) : '';
+                        out += `<m:nary>` +
+                            `<m:naryPr>` +
+                            `<m:chr m:val="${xmlEscape(naryChar)}"/>` +
+                            `<m:limLoc m:val="${limLoc}"/>` +
+                            `<m:subHide m:val="${subHide}"/>` +
+                            `<m:supHide m:val="${supHide}"/>` +
+                            `</m:naryPr>` +
+                            `${subXml || '<m:sub/>'}` +
+                            `${supXml || '<m:sup/>'}` +
+                            `<m:e>${bodyXml}</m:e>` +
+                            `</m:nary>`;
+                        i = j;
+                        continue;
+                    }
+                }
+
+                if (tag === 'mo' && isNaryOperatorNode(curr)) {
+                    const naryChar = extractOperatorChar(curr);
+                    const bodyNodes = [];
+                    let j = i + 1;
+                    while (j < nodes.length) {
+                        const nextEl = nodes[j];
+                        if (nextEl.nodeType === Node.ELEMENT_NODE && nextEl.localName.toLowerCase() === 'mo') {
+                            const opTxt = getCleanMathText(nextEl).trim();
+                            if (['=', '≠', '≈', '≡', '≤', '≥', '<', '>', '⇒', '⇔', '→', ','].includes(opTxt)) {
+                                break;
+                            }
+                        }
+                        bodyNodes.push(nextEl);
+                        j++;
+                    }
+                    const bodyXml = bodyNodes.length > 0 ? convertChildrenToOmml(bodyNodes, 0) : '';
+                    out += `<m:nary>` +
+                        `<m:naryPr>` +
+                        `<m:chr m:val="${xmlEscape(naryChar)}"/>` +
+                        `<m:limLoc m:val="subSup"/>` +
+                        `<m:subHide m:val="1"/>` +
+                        `<m:supHide m:val="1"/>` +
+                        `</m:naryPr>` +
+                        `<m:sub/><m:sup/>` +
+                        `<m:e>${bodyXml}</m:e>` +
+                        `</m:nary>`;
+                    i = j;
+                    continue;
+                }
+
+                out += convertMathNodeToOmml(curr);
+                i++;
+            }
+
+            return out;
+        }
+
+        function convertMathNodeToOmml(node) {
+            if (!node) return '';
+            if (node.nodeType === Node.TEXT_NODE) {
+                const txt = node.textContent.trim();
+                return txt ? wrapMathRun(txt) : '';
+            }
+            if (node.nodeType !== Node.ELEMENT_NODE) return '';
+
+            const tag = node.localName.toLowerCase();
+            const children = getElementChildren(node);
+
+            switch (tag) {
+                case 'math':
+                case 'semantics':
+                    return children.length > 0 ? convertMathNodeToOmml(children[0]) : '';
+
+                case 'annotation':
+                case 'annotation-xml':
+                case 'mphantom':
+                case 'mpadded':
+                    return (tag === 'mphantom' || tag === 'mpadded') ? convertChildrenToOmml(children) : '';
+
+                case 'mstyle':
+                case 'mrow': {
+                    if (tag === 'mrow' && isFencedRow(node)) {
+                        const first = children[0];
+                        const last = children[children.length - 1];
+                        const begChr = getCleanMathText(first).trim();
+                        const endChr = getCleanMathText(last).trim();
+                        const innerNodes = children.slice(1, -1);
+
+                        if (innerNodes.length === 1 && innerNodes[0].localName.toLowerCase() === 'mtable') {
+                            const tableXml = convertMathNodeToOmml(innerNodes[0]);
+                            return `<m:d>` +
+                                `<m:dPr><m:begChr m:val="${xmlEscape(begChr)}"/><m:endChr m:val="${xmlEscape(endChr)}"/></m:dPr>` +
+                                `<m:e>${tableXml}</m:e>` +
+                                `</m:d>`;
+                        }
+
+                        return `<m:d>` +
+                            `<m:dPr><m:begChr m:val="${xmlEscape(begChr)}"/><m:endChr m:val="${xmlEscape(endChr)}"/></m:dPr>` +
+                            `<m:e>${convertChildrenToOmml(innerNodes)}</m:e>` +
+                            `</m:d>`;
+                    }
+                    return convertChildrenToOmml(children);
+                }
+
+                case 'mfenced': {
+                    const begChr = node.getAttribute('open') !== null ? node.getAttribute('open') : '(';
+                    const endChr = node.getAttribute('close') !== null ? node.getAttribute('close') : ')';
+                    const sepChr = node.getAttribute('separators') !== null ? node.getAttribute('separators') : ',';
+                    const eBlocks = children.map(ch => `<m:e>${convertMathNodeToOmml(ch)}</m:e>`).join('');
+                    return `<m:d>` +
+                        `<m:dPr>` +
+                        `<m:begChr m:val="${xmlEscape(begChr)}"/>` +
+                        `<m:sepChr m:val="${xmlEscape(sepChr)}"/>` +
+                        `<m:endChr m:val="${xmlEscape(endChr)}"/>` +
+                        `</m:dPr>` +
+                        `${eBlocks || '<m:e/>'}` +
+                        `</m:d>`;
+                }
+
+                case 'mi': {
+                    const txt = getCleanMathText(node);
+                    if (!txt) return '';
+                    const opts = getMathVariantOpts(node, txt.length > 1 ? 'p' : null);
+                    if (txt.length > 1 && !node.getAttribute('mathvariant')) {
+                        opts.nor = true;
+                        opts.italic = false;
+                    }
+                    return wrapMathRun(txt, opts);
+                }
+
+                case 'mn': {
+                    const txt = getCleanMathText(node);
+                    const opts = getMathVariantOpts(node, 'p');
+                    opts.italic = false;
+                    return wrapMathRun(txt, opts);
+                }
+
+                case 'mo': {
+                    let txt = getCleanMathText(node);
+                    if (!txt) return '';
+                    if (txt === '−') txt = '-';
+                    if (txt === '∗') txt = '*';
+                    const opts = getMathVariantOpts(node, 'p');
+                    opts.italic = false;
+                    return wrapMathRun(txt, opts);
+                }
+
+                case 'mtext': {
+                    const txt = getCleanMathText(node);
+                    return txt ? wrapMathRun(txt, { nor: true, sty: 'p', italic: false }) : '';
+                }
+
+                case 'mspace':
+                    return wrapMathRun(' ', { nor: true, sty: 'p', italic: false });
+
+                case 'ms':
+                    return wrapMathRun(`"${getCleanMathText(node)}"`, { nor: true, sty: 'p', italic: false });
+
+                case 'mfrac': {
+                    if (children.length < 2) return convertChildrenToOmml(children);
+                    const linethickness = node.getAttribute('linethickness');
+                    const isNoBar = linethickness === '0' || linethickness === '0px' || linethickness === '0pt';
+                    const isBevelled = node.getAttribute('bevelled') === 'true';
+                    let fracType = 'bar';
+                    if (isNoBar) fracType = 'noBar';
+                    else if (isBevelled) fracType = 'skw';
+
+                    return `<m:f>` +
+                        `<m:fPr><m:type m:val="${fracType}"/></m:fPr>` +
+                        `<m:num>${convertMathNodeToOmml(children[0])}</m:num>` +
+                        `<m:den>${convertMathNodeToOmml(children[1])}</m:den>` +
+                        `</m:f>`;
+                }
+
+                case 'msqrt':
+                    return `<m:rad>` +
+                        `<m:radPr><m:degHide m:val="1"/></m:radPr>` +
+                        `<m:deg/>` +
+                        `<m:e>${convertChildrenToOmml(children)}</m:e>` +
+                        `</m:rad>`;
+
+                case 'mroot': {
+                    if (children.length < 2) return convertChildrenToOmml(children);
+                    return `<m:rad>` +
+                        `<m:radPr><m:degHide m:val="0"/></m:radPr>` +
+                        `<m:deg>${convertMathNodeToOmml(children[1])}</m:deg>` +
+                        `<m:e>${convertMathNodeToOmml(children[0])}</m:e>` +
+                        `</m:rad>`;
+                }
+
+                case 'msup': {
+                    if (children.length < 2) return convertChildrenToOmml(children);
+                    return `<m:sSup>` +
+                        `<m:e>${convertMathNodeToOmml(children[0])}</m:e>` +
+                        `<m:sup>${convertMathNodeToOmml(children[1])}</m:sup>` +
+                        `</m:sSup>`;
+                }
+
+                case 'msub': {
+                    if (children.length < 2) return convertChildrenToOmml(children);
+                    return `<m:sSub>` +
+                        `<m:e>${convertMathNodeToOmml(children[0])}</m:e>` +
+                        `<m:sub>${convertMathNodeToOmml(children[1])}</m:sub>` +
+                        `</m:sSub>`;
+                }
+
+                case 'msubsup': {
+                    if (children.length < 3) return convertChildrenToOmml(children);
+                    return `<m:sSubSup>` +
+                        `<m:e>${convertMathNodeToOmml(children[0])}</m:e>` +
+                        `<m:sub>${convertMathNodeToOmml(children[1])}</m:sub>` +
+                        `<m:sup>${convertMathNodeToOmml(children[2])}</m:sup>` +
+                        `</m:sSubSup>`;
+                }
+
+                case 'mover': {
+                    if (children.length < 2) return convertChildrenToOmml(children);
+                    const base = children[0];
+                    const over = children[1];
+                    const overTxt = getCleanMathText(over).trim();
+
+                    if (UNICODE_ACCENT_MAP[overTxt]) {
+                        const chr = UNICODE_ACCENT_MAP[overTxt];
+                        return `<m:acc>` +
+                            `<m:accPr><m:chr m:val="${xmlEscape(chr)}"/></m:accPr>` +
+                            `<m:e>${convertMathNodeToOmml(base)}</m:e>` +
+                            `</m:acc>`;
+                    }
+
+                    if (overTxt === '‾' || overTxt === '―' || overTxt === '—') {
+                        return `<m:bar>` +
+                            `<m:barPr><m:pos m:val="top"/></m:barPr>` +
+                            `<m:e>${convertMathNodeToOmml(base)}</m:e>` +
+                            `</m:bar>`;
+                    }
+
+                    if (overTxt === '⏞' || overTxt === '︷') {
+                        return `<m:groupChr>` +
+                            `<m:groupChrPr><m:chr m:val="⏞"/><m:pos m:val="top"/><m:vertJc m:val="bot"/></m:groupChrPr>` +
+                            `<m:e>${convertMathNodeToOmml(base)}</m:e>` +
+                            `</m:groupChr>`;
+                    }
+
+                    return `<m:limUpp>` +
+                        `<m:e>${convertMathNodeToOmml(base)}</m:e>` +
+                        `<m:lim>${convertMathNodeToOmml(over)}</m:lim>` +
+                        `</m:limUpp>`;
+                }
+
+                case 'munder': {
+                    if (children.length < 2) return convertChildrenToOmml(children);
+                    const base = children[0];
+                    const under = children[1];
+                    const underTxt = getCleanMathText(under).trim();
+
+                    if (underTxt === '_' || underTxt === '̲' || underTxt === '‾' || underTxt === '―') {
+                        return `<m:bar>` +
+                            `<m:barPr><m:pos m:val="bot"/></m:barPr>` +
+                            `<m:e>${convertMathNodeToOmml(base)}</m:e>` +
+                            `</m:bar>`;
+                    }
+
+                    if (underTxt === '⏟' || underTxt === '︸') {
+                        return `<m:groupChr>` +
+                            `<m:groupChrPr><m:chr m:val="⏟"/><m:pos m:val="bot"/><m:vertJc m:val="top"/></m:groupChrPr>` +
+                            `<m:e>${convertMathNodeToOmml(base)}</m:e>` +
+                            `</m:groupChr>`;
+                    }
+
+                    return `<m:limLow>` +
+                        `<m:e>${convertMathNodeToOmml(base)}</m:e>` +
+                        `<m:lim>${convertMathNodeToOmml(under)}</m:lim>` +
+                        `</m:limLow>`;
+                }
+
+                case 'munderover': {
+                    if (children.length < 3) return convertChildrenToOmml(children);
+                    const base = children[0];
+                    const under = children[1];
+                    const over = children[2];
+                    return `<m:limUpp>` +
+                        `<m:e>` +
+                        `<m:limLow>` +
+                        `<m:e>${convertMathNodeToOmml(base)}</m:e>` +
+                        `<m:lim>${convertMathNodeToOmml(under)}</m:lim>` +
+                        `</m:limLow>` +
+                        `</m:e>` +
+                        `<m:lim>${convertMathNodeToOmml(over)}</m:lim>` +
+                        `</m:limUpp>`;
+                }
+
+                case 'mmultiscripts': {
+                    let baseNode = children[0];
+                    let postSub = null, postSup = null, preSub = null, preSup = null;
+                    let inPre = false;
+                    let slot = 0;
+                    for (let k = 1; k < children.length; k++) {
+                        const c = children[k];
+                        if (c.localName.toLowerCase() === 'mprescripts') {
+                            inPre = true; slot = 0; continue;
+                        }
+                        if (c.localName.toLowerCase() === 'none') {
+                            slot = 1 - slot; continue;
+                        }
+                        if (!inPre) {
+                            if (slot === 0) postSub = c; else postSup = c;
+                        } else {
+                            if (slot === 0) preSub = c; else preSup = c;
+                        }
+                        slot = 1 - slot;
+                    }
+
+                    let coreXml = convertMathNodeToOmml(baseNode);
+                    if (postSub && postSup) {
+                        coreXml = `<m:sSubSup><m:e>${coreXml}</m:e><m:sub>${convertMathNodeToOmml(postSub)}</m:sub><m:sup>${convertMathNodeToOmml(postSup)}</m:sup></m:sSubSup>`;
+                    } else if (postSub) {
+                        coreXml = `<m:sSub><m:e>${coreXml}</m:e><m:sub>${convertMathNodeToOmml(postSub)}</m:sub></m:sSub>`;
+                    } else if (postSup) {
+                        coreXml = `<m:sSup><m:e>${coreXml}</m:e><m:sup>${convertMathNodeToOmml(postSup)}</m:sup></m:sSup>`;
+                    }
+
+                    if (preSub || preSup) {
+                        return `<m:sPre>` +
+                            `<m:sub>${preSub ? convertMathNodeToOmml(preSub) : ''}</m:sub>` +
+                            `<m:sup>${preSup ? convertMathNodeToOmml(preSup) : ''}</m:sup>` +
+                            `<m:e>${coreXml}</m:e>` +
+                            `</m:sPre>`;
+                    }
+                    return coreXml;
+                }
+
+                case 'mtable': {
+                    const rows = children.filter(c => c.localName.toLowerCase() === 'mtr' || c.localName.toLowerCase() === 'mlabeledtr');
+                    if (rows.length === 0) return '';
+
+                    let maxCols = 1;
+                    const rowCells = rows.map(r => {
+                        let cells = getElementChildren(r).filter(c => c.localName.toLowerCase() === 'mtd');
+                        if (r.localName.toLowerCase() === 'mlabeledtr' && cells.length > 1) {
+                            cells = cells.slice(1);
+                        }
+                        if (cells.length > maxCols) maxCols = cells.length;
+                        return cells;
+                    });
+
+                    if (maxCols === 1) {
+                        const eqRows = rowCells.map(cells => {
+                            const cellXml = cells[0] ? convertChildrenToOmml(getElementChildren(cells[0])) : '';
+                            return `<m:e>${cellXml}</m:e>`;
+                        }).join('');
+                        return `<m:eqArr>${eqRows}</m:eqArr>`;
+                    }
+
+                    const mcs = `<m:mcs><m:mc><m:mcPr><m:count m:val="${maxCols}"/><m:mcJc m:val="center"/></m:mcPr></m:mc></m:mcs>`;
+                    const mRows = rowCells.map(cells => {
+                        let mr = '<m:mr>';
+                        for (let c = 0; c < maxCols; c++) {
+                            const cellXml = cells[c] ? convertChildrenToOmml(getElementChildren(cells[c])) : '';
+                            mr += `<m:e>${cellXml}</m:e>`;
+                        }
+                        mr += '</m:mr>';
+                        return mr;
+                    }).join('');
+
+                    return `<m:m><m:mPr>${mcs}</m:mPr>${mRows}</m:m>`;
+                }
+
+                default: {
+                    if (children.length > 0) return convertChildrenToOmml(children);
+                    const txt = getCleanMathText(node);
+                    return txt ? wrapMathRun(txt) : '';
+                }
+            }
+        }
+
+        function katexNodeToOmml(katexEl, forceDisplay = false) {
+            const mathEl = katexEl.querySelector('.katex-mathml math');
+            if (!mathEl) {
+                const annotation = katexEl.querySelector('annotation');
+                const fallbackTxt = annotation ? annotation.textContent : katexEl.textContent;
+                return `<m:oMath>${wrapMathRun(fallbackTxt)}</m:oMath>`;
+            }
+
+            const isDisplay = forceDisplay ||
+                mathEl.getAttribute('display') === 'block' ||
+                katexEl.classList.contains('katex-display') ||
+                (katexEl.parentElement && katexEl.parentElement.classList.contains('katex-display'));
+
+            const innerOmml = convertMathNodeToOmml(mathEl);
+            if (!innerOmml) return '';
+
+            if (isDisplay) {
+                return `<m:oMathPara><m:oMathParaPr><m:jc m:val="center"/></m:oMathParaPr><m:oMath>${innerOmml}</m:oMath></m:oMathPara>`;
+            }
+            return `<m:oMath>${innerOmml}</m:oMath>`;
+        }
+
+        function buildWordRun(text, style = {}) {
+            if (!text) return '';
+            let rPr = '<w:rPr><w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>';
+            if (style.font) {
+                rPr = `<w:rPr><w:rFonts w:ascii="${style.font}" w:hAnsi="${style.font}" w:cs="${style.font}"/>`;
+            }
+            if (style.bold) rPr += '<w:b/><w:bCs/>';
+            if (style.italic) rPr += '<w:i/><w:iCs/>';
+            if (style.underline) rPr += '<w:u w:val="single"/>';
+            if (style.strike) rPr += '<w:strike/>';
+            if (style.color) rPr += `<w:color w:val="${style.color}"/>`;
+            if (style.sizeHalfPt) rPr += `<w:sz w:val="${style.sizeHalfPt}"/><w:szCs w:val="${style.sizeHalfPt}"/>`;
+            if (style.vertAlign) rPr += `<w:vertAlign w:val="${style.vertAlign}"/>`;
+            rPr += '</w:rPr>';
+
+            const parts = text.split('\n');
+            return parts.map((part, idx) => {
+                const br = idx > 0 ? '<w:br/>' : '';
+                return `<w:r>${rPr}${br}<w:t xml:space="preserve">${xmlEscape(part)}</w:t></w:r>`;
+            }).join('');
+        }
+
+        function collectInlineTokens(nodes, style = {}, tokens = []) {
+            nodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    const raw = node.nodeValue;
+                    if (raw) {
+                        const normalized = raw.replace(/\r?\n\s*/g, ' ');
+                        tokens.push({ type: 'text', text: normalized, style: { ...style } });
+                    }
+                    return;
+                }
+
+                if (node.nodeType !== Node.ELEMENT_NODE) return;
+                const tag = node.tagName.toLowerCase();
+
+                if (node.classList.contains('katex-display')) {
+                    const katexEl = node.querySelector('.katex');
+                    if (katexEl) {
+                        const xml = katexNodeToOmml(katexEl, true);
+                        if (xml) tokens.push({ type: 'omath', xml });
+                    }
+                    return;
+                }
+
+                if (node.classList.contains('katex')) {
+                    const xml = katexNodeToOmml(node, false);
+                    if (xml) tokens.push({ type: 'omath', xml });
+                    return;
+                }
+
+                if (node.classList.contains('katex-space-guard')) {
+                    tokens.push({ type: 'text', text: ' ', style: { ...style }, isGuard: true });
+                    return;
+                }
+
+                if (tag === 'br') {
+                    tokens.push({ type: 'br' });
+                    return;
+                }
+
+                const nextStyle = { ...style };
+                if (tag === 'strong' || tag === 'b') nextStyle.bold = true;
+                if (tag === 'em' || tag === 'i') nextStyle.italic = true;
+                if (tag === 'u') nextStyle.underline = true;
+                if (tag === 's' || tag === 'del' || tag === 'strike') nextStyle.strike = true;
+                if (tag === 'sup') nextStyle.vertAlign = 'superscript';
+                if (tag === 'sub') nextStyle.vertAlign = 'subscript';
+                if (tag === 'code') {
+                    nextStyle.font = 'Consolas';
+                    nextStyle.sizeHalfPt = 22;
+                }
+                if (tag === 'a') {
+                    nextStyle.color = '1D4ED8';
+                    nextStyle.underline = true;
+                }
+
+                collectInlineTokens(Array.from(node.childNodes), nextStyle, tokens);
+            });
+            return tokens;
+        }
+
+        function cleanExportTokens(rawTokens) {
+            let tokens = rawTokens.map(tok => {
+                if (tok.type !== 'text') return tok;
+                let t = tok.text.replace(/\u00A0/g, ' ');
+                t = t.replace(/ {2,}/g, ' ');
+                t = t.replace(/ +([.,;:!?)\]}…»”’])/g, '$1');
+                t = t.replace(/([(\[{«“]) +/g, '$1');
+                return { ...tok, text: t };
+            });
+
+            while (tokens.length > 0 && tokens[0].type === 'text') {
+                tokens[0].text = tokens[0].text.replace(/^ +/, '');
+                if (tokens[0].text === '') tokens.shift();
+                else break;
+            }
+            while (tokens.length > 0 && tokens[tokens.length - 1].type === 'text') {
+                const lastIdx = tokens.length - 1;
+                tokens[lastIdx].text = tokens[lastIdx].text.replace(/ +$/, '');
+                if (tokens[lastIdx].text === '') tokens.pop();
+                else break;
+            }
+
+            for (let i = 0; i < tokens.length; i++) {
+                const curr = tokens[i];
+                if (curr.type !== 'text' || curr.text === '') continue;
+
+                let prevIdx = i - 1;
+                while (prevIdx >= 0 && tokens[prevIdx].type === 'text' && tokens[prevIdx].text === '') {
+                    prevIdx--;
+                }
+                const prev = prevIdx >= 0 ? tokens[prevIdx] : null;
+
+                if (prev) {
+                    if (prev.type === 'text') {
+                        if (prev.text.endsWith(' ') && curr.text.startsWith(' ')) {
+                            curr.text = curr.text.replace(/^ +/, '');
+                        }
+                        if (prev.text.endsWith(' ') && /^[.,;:!?)\]}…»”’]/.test(curr.text)) {
+                            prev.text = prev.text.replace(/ +$/, '');
+                        }
+                        if (/[(\[{«“]$/.test(prev.text) && curr.text.startsWith(' ')) {
+                            curr.text = curr.text.replace(/^ +/, '');
+                        }
+                    } else if (prev.type === 'omath') {
+                        if (/^ +[.,;:!?)\]}…»”’]/.test(curr.text)) {
+                            curr.text = curr.text.replace(/^ +/, '');
+                        }
+                    } else if (prev.type === 'br') {
+                        curr.text = curr.text.replace(/^ +/, '');
+                    }
+                }
+
+                let nextIdx = i + 1;
+                while (nextIdx < tokens.length && tokens[nextIdx].type === 'text' && tokens[nextIdx].text === '') {
+                    nextIdx++;
+                }
+                const next = nextIdx < tokens.length ? tokens[nextIdx] : null;
+                if (next && next.type === 'omath') {
+                    if (/[(\[{«“] +$/.test(curr.text)) {
+                        curr.text = curr.text.replace(/ +$/, '');
+                    }
+                }
+            }
+
+            tokens = tokens.filter(tok => !(tok.type === 'text' && tok.text === ''));
+
+            for (let i = 1; i < tokens.length; i++) {
+                const prev = tokens[i - 1];
+                const curr = tokens[i];
+                if (prev.type === 'text' && curr.type === 'text') {
+                    if (prev.text.endsWith(' ') && curr.text.startsWith(' ')) {
+                        curr.text = curr.text.replace(/^ +/, '');
+                    }
+                    if (prev.text.endsWith(' ') && /^[.,;:!?)\]}…»”’]/.test(curr.text)) {
+                        prev.text = prev.text.replace(/ +$/, '');
+                    }
+                    if (/[(\[{«“]$/.test(prev.text) && curr.text.startsWith(' ')) {
+                        curr.text = curr.text.replace(/^ +/, '');
+                    }
+                }
+            }
+
+            return tokens.filter(tok => !(tok.type === 'text' && tok.text === ''));
+        }
+
+        function serializeInlineNodesToOoxml(nodes, style = {}, shouldClean = false) {
+            let tokens = collectInlineTokens(nodes, style, []);
+            if (shouldClean) {
+                tokens = cleanExportTokens(tokens);
+            }
+            return tokens.map(tok => {
+                if (tok.type === 'text') return buildWordRun(tok.text, tok.style);
+                if (tok.type === 'omath') return tok.xml;
+                if (tok.type === 'br') return '<w:r><w:br/></w:r>';
+                return '';
+            }).join('');
+        }
+
+        function buildParagraphXml(innerXml, pOpts = {}) {
+            let pPr = '<w:pPr>';
+            if (pOpts.pStyle) pPr += `<w:pStyle w:val="${pOpts.pStyle}"/>`;
+            if (pOpts.numPr) pPr += `<w:numPr><w:ilvl w:val="${pOpts.ilvl || 0}"/><w:numId w:val="${pOpts.numId}"/></w:numPr>`;
+            if (pOpts.borderBottom) pPr += '<w:pBdr><w:bottom w:val="single" w:sz="6" w:space="4" w:color="CBD5E1"/></w:pBdr>';
+            if (pOpts.borderLeft) pPr += '<w:pBdr><w:left w:val="single" w:sz="18" w:space="10" w:color="3B82F6"/></w:pBdr><w:ind w:left="360"/>';
+            if (pOpts.shading) pPr += `<w:shd w:val="clear" w:color="auto" w:fill="${pOpts.shading}"/>`;
+            if (pOpts.jc) pPr += `<w:jc w:val="${pOpts.jc}"/>`;
+
+            const before = pOpts.spaceBefore !== undefined ? pOpts.spaceBefore : 0;
+            const after = pOpts.spaceAfter !== undefined ? pOpts.spaceAfter : 120;
+            const line = pOpts.line !== undefined ? pOpts.line : 300;
+            pPr += `<w:spacing w:before="${before}" w:after="${after}" w:line="${line}" w:lineRule="auto"/>`;
+            pPr += '</w:pPr>';
+
+            return `<w:p>${pPr}${innerXml}</w:p>`;
+        }
+
+        function serializeTableToOoxml(tableEl, shouldClean = false) {
+            const rows = Array.from(tableEl.querySelectorAll('tr'));
+            if (rows.length === 0) return '';
+
+            let tblXml = `<w:tbl>` +
+                `<w:tblPr>` +
+                `<w:tblW w:w="5000" w:type="pct"/>` +
+                `<w:tblBorders>` +
+                `<w:top w:val="single" w:sz="4" w:space="0" w:color="94A3B8"/>` +
+                `<w:left w:val="single" w:sz="4" w:space="0" w:color="94A3B8"/>` +
+                `<w:bottom w:val="single" w:sz="4" w:space="0" w:color="94A3B8"/>` +
+                `<w:right w:val="single" w:sz="4" w:space="0" w:color="94A3B8"/>` +
+                `<w:insideH w:val="single" w:sz="4" w:space="0" w:color="94A3B8"/>` +
+                `<w:insideV w:val="single" w:sz="4" w:space="0" w:color="94A3B8"/>` +
+                `</w:tblBorders>` +
+                `<w:tblCellMar>` +
+                `<w:top w:w="80" w:type="dxa"/><w:left w:w="120" w:type="dxa"/>` +
+                `<w:bottom w:w="80" w:type="dxa"/><w:right w:w="120" w:type="dxa"/>` +
+                `</w:tblCellMar>` +
+                `</w:tblPr>`;
+
+            rows.forEach(tr => {
+                tblXml += '<w:tr>';
+                const cells = Array.from(tr.children).filter(c => ['td', 'th'].includes(c.tagName.toLowerCase()));
+                cells.forEach(cell => {
+                    const isHeader = cell.tagName.toLowerCase() === 'th';
+                    const tcPr = isHeader
+                        ? '<w:tcPr><w:shd w:val="clear" w:color="auto" w:fill="F1F5F9"/></w:tcPr>'
+                        : '<w:tcPr/>';
+                    const cellContent = serializeInlineNodesToOoxml(
+                        Array.from(cell.childNodes),
+                        { bold: isHeader, sizeHalfPt: 24 },
+                        shouldClean
+                    );
+                    const pXml = buildParagraphXml(cellContent || '<w:r><w:t></w:t></w:r>', { spaceBefore: 0, spaceAfter: 40, line: 260 });
+                    tblXml += `<w:tc>${tcPr}${pXml}</w:tc>`;
+                });
+                tblXml += '</w:tr>';
+            });
+
+            tblXml += '</w:tbl>';
+            return tblXml;
+        }
+
+        function serializeBlockNodesToOoxml(nodes, listContext = null, shouldClean = false) {
+            let bodyXml = '';
+
+            nodes.forEach(node => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    let txt = node.nodeValue.trim();
+                    if (shouldClean) {
+                        txt = txt.replace(/[ \u00A0]{2,}/g, ' ')
+                                 .replace(/[ \u00A0]+([.,;:!?)\]}…»”’])/g, '$1')
+                                 .replace(/([(\[{«“])[ \u00A0]+/g, '$1');
+                    }
+                    if (txt) {
+                        bodyXml += buildParagraphXml(buildWordRun(txt, { sizeHalfPt: 26 }), { spaceAfter: 120 });
+                    }
+                    return;
+                }
+
+                if (node.nodeType !== Node.ELEMENT_NODE) return;
+                const tag = node.tagName.toLowerCase();
+
+                if (node.classList.contains('katex-display')) {
+                    const katexEl = node.querySelector('.katex');
+                    if (katexEl) {
+                        const omathPara = katexNodeToOmml(katexEl, true);
+                        bodyXml += buildParagraphXml(omathPara, { spaceBefore: 80, spaceAfter: 120, jc: 'center' });
+                    }
+                    return;
+                }
+
+                if (/^h[1-6]$/.test(tag)) {
+                    const level = parseInt(tag[1], 10);
+                    const sizeMap = { 1: 36, 2: 30, 3: 27, 4: 26, 5: 25, 6: 24 };
+                    const spaceBeforeMap = { 1: 240, 2: 200, 3: 160, 4: 140, 5: 120, 6: 100 };
+                    const inlineXml = serializeInlineNodesToOoxml(
+                        Array.from(node.childNodes),
+                        { bold: true, sizeHalfPt: sizeMap[level] },
+                        shouldClean
+                    );
+                    bodyXml += buildParagraphXml(inlineXml, {
+                        pStyle: `Heading${level}`,
+                        spaceBefore: spaceBeforeMap[level],
+                        spaceAfter: 80
+                    });
+                    return;
+                }
+
+                if (tag === 'p') {
+                    const meaningfulChildren = Array.from(node.childNodes).filter(n =>
+                        !(n.nodeType === Node.TEXT_NODE && !n.nodeValue.trim())
+                    );
+                    if (meaningfulChildren.length === 1 &&
+                        meaningfulChildren[0].nodeType === Node.ELEMENT_NODE &&
+                        meaningfulChildren[0].classList.contains('katex-display')) {
+                        const katexEl = meaningfulChildren[0].querySelector('.katex');
+                        if (katexEl) {
+                            const omathPara = katexNodeToOmml(katexEl, true);
+                            bodyXml += buildParagraphXml(omathPara, { spaceBefore: 80, spaceAfter: 120, jc: 'center' });
+                        }
+                        return;
+                    }
+
+                    const inlineXml = serializeInlineNodesToOoxml(
+                        Array.from(node.childNodes),
+                        { sizeHalfPt: 26 },
+                        shouldClean
+                    );
+                    bodyXml += buildParagraphXml(inlineXml, { spaceBefore: 0, spaceAfter: 120 });
+                    return;
+                }
+
+                if (tag === 'hr') {
+                    bodyXml += buildParagraphXml('', { borderBottom: true, spaceBefore: 80, spaceAfter: 140 });
+                    return;
+                }
+
+                if (tag === 'blockquote') {
+                    const inlineXml = serializeInlineNodesToOoxml(
+                        Array.from(node.childNodes),
+                        { italic: true, color: '4B5563', sizeHalfPt: 26 },
+                        shouldClean
+                    );
+                    bodyXml += buildParagraphXml(inlineXml, {
+                        borderLeft: true,
+                        spaceBefore: 80,
+                        spaceAfter: 120
+                    });
+                    return;
+                }
+
+                if (tag === 'pre') {
+                    const codeText = node.textContent || '';
+                    const codeRun = buildWordRun(codeText, { font: 'Consolas', sizeHalfPt: 21, color: '1E293B' });
+                    bodyXml += buildParagraphXml(codeRun, {
+                        shading: 'F1F5F9',
+                        spaceBefore: 80,
+                        spaceAfter: 120,
+                        line: 260
+                    });
+                    return;
+                }
+
+                if (tag === 'ul' || tag === 'ol') {
+                    const numId = tag === 'ul' ? 1 : 2;
+                    const ilvl = listContext ? listContext.ilvl + 1 : 0;
+                    const items = Array.from(node.children).filter(c => c.tagName.toLowerCase() === 'li');
+                    items.forEach(li => {
+                        const inlineParts = [];
+                        const nestedBlocks = [];
+                        Array.from(li.childNodes).forEach(child => {
+                            if (child.nodeType === Node.ELEMENT_NODE && ['ul', 'ol'].includes(child.tagName.toLowerCase())) {
+                                nestedBlocks.push(child);
+                            } else {
+                                inlineParts.push(child);
+                            }
+                        });
+
+                        const liInlineXml = serializeInlineNodesToOoxml(inlineParts, { sizeHalfPt: 26 }, shouldClean);
+                        if (liInlineXml) {
+                            bodyXml += buildParagraphXml(liInlineXml, {
+                                numPr: true,
+                                numId: numId,
+                                ilvl: Math.min(ilvl, 8),
+                                spaceBefore: 0,
+                                spaceAfter: 60
+                            });
+                        }
+                        if (nestedBlocks.length > 0) {
+                            bodyXml += serializeBlockNodesToOoxml(nestedBlocks, { ilvl }, shouldClean);
+                        }
+                    });
+                    return;
+                }
+
+                if (tag === 'table') {
+                    bodyXml += serializeTableToOoxml(node, shouldClean);
+                    return;
+                }
+
+                bodyXml += serializeBlockNodesToOoxml(Array.from(node.childNodes), listContext, shouldClean);
+            });
+
+            return bodyXml;
+        }
+
+        function prepareExportContainerClone(previewEl, shouldClean) {
+            const exportClone = previewEl.cloneNode(true);
+            if (shouldClean) {
+                cleanRenderedSpaces(exportClone);
+            }
+            return exportClone;
+        }
+
+        async function generateNativeOmMlDocxBlob(previewEl, shouldClean = false) {
+            const zip = new JSZip();
+            const exportContainer = prepareExportContainerClone(previewEl, shouldClean);
+
+            const contentTypesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
+  <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
+  <Default Extension="xml" ContentType="application/xml"/>
+  <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
+  <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
+  <Override PartName="/word/settings.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.settings+xml"/>
+  <Override PartName="/word/numbering.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.numbering+xml"/>
+  <Override PartName="/word/fontTable.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.fontTable+xml"/>
+</Types>`;
+
+            const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/>
+</Relationships>`;
+
+            const documentRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
+  <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  <Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/settings" Target="settings.xml"/>
+  <Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/numbering" Target="numbering.xml"/>
+  <Relationship Id="rId4" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/fontTable" Target="fontTable.xml"/>
+</Relationships>`;
+
+            const settingsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:settings xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math">
+  <w:zoom w:percent="100"/>
+  <w:defaultTabStop w:val="720"/>
+  <m:mathPr>
+    <m:mathFont m:val="Cambria Math"/>
+    <m:brkBin m:val="before"/>
+    <m:brkBinSub m:val="--"/>
+    <m:smallFrac m:val="0"/>
+    <m:dispDef/>
+    <m:lMargin m:val="0"/>
+    <m:rMargin m:val="0"/>
+    <m:defJc m:val="centerGroup"/>
+    <m:wrapIndent m:val="1440"/>
+    <m:intLim m:val="subSup"/>
+    <m:naryLim m:val="undOvr"/>
+  </m:mathPr>
+  <w:compat>
+    <w:compatSetting w:name="compatibilityMode" w:uri="http://schemas.microsoft.com/office/word" w:val="15"/>
+  </w:compat>
+</w:settings>`;
+
+            const fontTableXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:fonts xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:font w:name="Times New Roman">
+    <w:charset w:val="00"/>
+    <w:family w:val="roman"/>
+    <w:pitch w:val="variable"/>
+  </w:font>
+  <w:font w:name="Cambria Math">
+    <w:charset w:val="00"/>
+    <w:family w:val="roman"/>
+    <w:pitch w:val="variable"/>
+  </w:font>
+  <w:font w:name="Consolas">
+    <w:charset w:val="00"/>
+    <w:family w:val="modern"/>
+    <w:pitch w:val="fixed"/>
+  </w:font>
+</w:fonts>`;
+
+            const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:styles xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:docDefaults>
+    <w:rPrDefault>
+      <w:rPr>
+        <w:rFonts w:ascii="Times New Roman" w:hAnsi="Times New Roman" w:cs="Times New Roman"/>
+        <w:sz w:val="26"/>
+        <w:szCs w:val="26"/>
+        <w:lang w:val="vi-VN" w:eastAsia="en-US" w:bidi="ar-SA"/>
+      </w:rPr>
+    </w:rPrDefault>
+    <w:pPrDefault>
+      <w:pPr>
+        <w:spacing w:after="120" w:line="300" w:lineRule="auto"/>
+      </w:pPr>
+    </w:pPrDefault>
+  </w:docDefaults>
+  <w:style w:type="paragraph" w:default="1" w:styleId="Normal">
+    <w:name w:val="Normal"/>
+    <w:qFormat/>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="Heading1">
+    <w:name w:val="heading 1"/>
+    <w:basedOn w:val="Normal"/>
+    <w:qFormat/>
+    <w:pPr><w:keepNext/><w:outlineLvl w:val="0"/></w:pPr>
+    <w:rPr><w:b/><w:sz w:val="36"/><w:szCs w:val="36"/></w:rPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="Heading2">
+    <w:name w:val="heading 2"/>
+    <w:basedOn w:val="Normal"/>
+    <w:qFormat/>
+    <w:pPr><w:keepNext/><w:outlineLvl w:val="1"/></w:pPr>
+    <w:rPr><w:b/><w:sz w:val="30"/><w:szCs w:val="30"/></w:rPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="Heading3">
+    <w:name w:val="heading 3"/>
+    <w:basedOn w:val="Normal"/>
+    <w:qFormat/>
+    <w:pPr><w:keepNext/><w:outlineLvl w:val="2"/></w:pPr>
+    <w:rPr><w:b/><w:sz w:val="27"/><w:szCs w:val="27"/></w:rPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="Heading4">
+    <w:name w:val="heading 4"/>
+    <w:basedOn w:val="Normal"/>
+    <w:qFormat/>
+    <w:pPr><w:keepNext/><w:outlineLvl w:val="3"/></w:pPr>
+    <w:rPr><w:b/><w:sz w:val="26"/><w:szCs w:val="26"/></w:rPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="Heading5">
+    <w:name w:val="heading 5"/>
+    <w:basedOn w:val="Normal"/>
+    <w:qFormat/>
+    <w:pPr><w:keepNext/><w:outlineLvl w:val="4"/></w:pPr>
+    <w:rPr><w:b/><w:sz w:val="25"/><w:szCs w:val="25"/></w:rPr>
+  </w:style>
+  <w:style w:type="paragraph" w:styleId="Heading6">
+    <w:name w:val="heading 6"/>
+    <w:basedOn w:val="Normal"/>
+    <w:qFormat/>
+    <w:pPr><w:keepNext/><w:outlineLvl w:val="5"/></w:pPr>
+    <w:rPr><w:b/><w:sz w:val="24"/><w:szCs w:val="24"/></w:rPr>
+  </w:style>
+</w:styles>`;
+
+            const numberingXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:numbering xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:abstractNum w:abstractNumId="0">
+    <w:multiLevelType w:val="hybridMultilevel"/>
+    <w:lvl w:ilvl="0">
+      <w:start w:val="1"/>
+      <w:numFmt w:val="bullet"/>
+      <w:lvlText w:val="•"/>
+      <w:lvlJc w:val="left"/>
+      <w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr>
+      <w:rPr><w:rFonts w:ascii="Symbol" w:hAnsi="Symbol" w:hint="default"/></w:rPr>
+    </w:lvl>
+    <w:lvl w:ilvl="1">
+      <w:start w:val="1"/>
+      <w:numFmt w:val="bullet"/>
+      <w:lvlText w:val="o"/>
+      <w:lvlJc w:val="left"/>
+      <w:pPr><w:ind w:left="1440" w:hanging="360"/></w:pPr>
+      <w:rPr><w:rFonts w:ascii="Courier New" w:hAnsi="Courier New" w:hint="default"/></w:rPr>
+    </w:lvl>
+  </w:abstractNum>
+  <w:abstractNum w:abstractNumId="1">
+    <w:multiLevelType w:val="hybridMultilevel"/>
+    <w:lvl w:ilvl="0">
+      <w:start w:val="1"/>
+      <w:numFmt w:val="decimal"/>
+      <w:lvlText w:val="%1."/>
+      <w:lvlJc w:val="left"/>
+      <w:pPr><w:ind w:left="720" w:hanging="360"/></w:pPr>
+    </w:lvl>
+    <w:lvl w:ilvl="1">
+      <w:start w:val="1"/>
+      <w:numFmt w:val="lowerLetter"/>
+      <w:lvlText w:val="%2."/>
+      <w:lvlJc w:val="left"/>
+      <w:pPr><w:ind w:left="1440" w:hanging="360"/></w:pPr>
+    </w:lvl>
+  </w:abstractNum>
+  <w:num w:numId="1"><w:abstractNumId w:val="0"/></w:num>
+  <w:num w:numId="2"><w:abstractNumId w:val="1"/></w:num>
+</w:numbering>`;
+
+            const bodyContentXml = serializeBlockNodesToOoxml(Array.from(exportContainer.childNodes), null, shouldClean);
+            const footerCreditXml = buildParagraphXml('', { borderBottom: true, spaceBefore: 160, spaceAfter: 80 }) +
+                buildParagraphXml(
+                    buildWordRun('Tài liệu được soạn thảo bởi Icarus (kienspvl@gmail.com - 097.463.87.94)', {
+                        sizeHalfPt: 20,
+                        color: '64748B',
+                        italic: true
+                    }),
+                    { jc: 'center', spaceBefore: 40, spaceAfter: 0 }
+                );
+
+            const documentXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"
+            xmlns:m="http://schemas.openxmlformats.org/officeDocument/2006/math"
+            xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  <w:body>
+    ${bodyContentXml}
+    ${footerCreditXml}
+    <w:sectPr>
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="720" w:footer="720" w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+
+            zip.file('[Content_Types].xml', contentTypesXml);
+            zip.folder('_rels').file('.rels', rootRelsXml);
+            const wordFolder = zip.folder('word');
+            wordFolder.file('document.xml', documentXml);
+            wordFolder.file('styles.xml', stylesXml);
+            wordFolder.file('settings.xml', settingsXml);
+            wordFolder.file('numbering.xml', numberingXml);
+            wordFolder.file('fontTable.xml', fontTableXml);
+            wordFolder.folder('_rels').file('document.xml.rels', documentRelsXml);
+
+            return await zip.generateAsync({
+                type: 'blob',
+                mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            });
+        }
+
+        function prepareHTMLForClipboard() {
+            const previewEl = document.getElementById('preview');
+            const cloneContainer = previewEl.cloneNode(true);
+
+            cloneContainer.querySelectorAll('.katex-display').forEach(dispEl => {
+                const mathmlNode = dispEl.querySelector('.katex-mathml math');
+                if (mathmlNode) {
+                    const clonedMath = mathmlNode.cloneNode(true);
+                    clonedMath.setAttribute('xmlns', 'http://www.w3.org/1998/Math/MathML');
+                    clonedMath.setAttribute('display', 'block');
+                    clonedMath.querySelectorAll('mspace').forEach(ms => {
+                        const mtext = document.createElementNS('http://www.w3.org/1998/Math/MathML', 'mtext');
+                        mtext.textContent = '\u00A0';
+                        ms.parentNode.replaceChild(mtext, ms);
+                    });
+
+                    const wrapper = document.createElement('p');
+                    wrapper.setAttribute('align', 'center');
+                    wrapper.style.textAlign = 'center';
+                    wrapper.appendChild(clonedMath);
+                    dispEl.parentNode.replaceChild(wrapper, dispEl);
+                }
+            });
+
+            cloneContainer.querySelectorAll('.katex').forEach(node => {
+                const mathmlNode = node.querySelector('.katex-mathml math');
+                if (mathmlNode) {
+                    const clonedMath = mathmlNode.cloneNode(true);
+                    clonedMath.setAttribute('xmlns', 'http://www.w3.org/1998/Math/MathML');
+                    clonedMath.querySelectorAll('mspace').forEach(ms => {
+                        const mtext = document.createElementNS('http://www.w3.org/1998/Math/MathML', 'mtext');
+                        mtext.textContent = '\u00A0';
+                        ms.parentNode.replaceChild(mtext, ms);
+                    });
+                    node.parentNode.replaceChild(clonedMath, node);
+                } else {
+                    const annotation = node.querySelector('annotation');
+                    let latexCode = annotation ? annotation.textContent : node.textContent;
+                    const mathSpan = document.createElement('span');
+                    mathSpan.style.fontFamily = '"Cambria Math", "Times New Roman", serif';
+                    mathSpan.textContent = ` ${latexCode} `;
+                    node.parentNode.replaceChild(mathSpan, node);
+                }
+            });
+
+            return cloneContainer.innerHTML;
+        }
+
+        async function executeClipboardCopy(toastSuccessMsg) {
+            const previewEl = document.getElementById('preview');
+            const cleanHTML = prepareHTMLForClipboard();
+            const textContent = previewEl.innerText;
+
+            try {
+                const htmlBlob = new Blob([cleanHTML], { type: 'text/html' });
+                const textBlob = new Blob([textContent], { type: 'text/plain' });
+                const clipboardItem = new ClipboardItem({
+                    'text/html': htmlBlob,
+                    'text/plain': textBlob
+                });
+                await navigator.clipboard.write([clipboardItem]);
+                showToast(toastSuccessMsg);
+            } catch (err) {
+                console.error('Lỗi sao chép:', err);
+                navigator.clipboard.writeText(textContent);
+                showToast('Đã sao chép nội dung dạng văn bản thuần.', 'info');
+            }
+        }
+
+        async function copyToWord() {
+            const previewEl = document.getElementById('preview');
+            if (!previewEl.innerText.trim() || previewEl.innerText.includes('Kết quả hiển thị sẽ xuất hiện')) {
+                showToast('Không có nội dung để copy!', 'error');
+                return;
+            }
+            applySpacePreference();
+            await executeClipboardCopy('Đã copy vào Clipboard! Mở Word và nhấn Ctrl + V để dán.');
+        }
+
+        async function cleanAndCopyToWord() {
+            const previewEl = document.getElementById('preview');
+            if (!previewEl.innerText.trim() || previewEl.innerText.includes('Kết quả hiển thị sẽ xuất hiện')) {
+                showToast('Không có nội dung để làm sạch và copy!', 'error');
+                return;
+            }
+            applySpacePreference();
+            cleanRenderedSpaces(previewEl);
+            await executeClipboardCopy('Đã xóa khoảng trắng thừa & copy vào Clipboard Word!');
+        }
+
+        function openExportModal(cleanBefore = false) {
+            const previewEl = document.getElementById('preview');
+            if (!previewEl.innerText.trim() || previewEl.innerText.includes('Kết quả hiển thị sẽ xuất hiện')) {
+                showToast('Không có nội dung để xuất file Word!', 'error');
+                return;
+            }
+
+            shouldCleanBeforeExport = cleanBefore;
+            const modalTitleEl = document.getElementById('modalExportTitle');
+            modalTitleEl.innerHTML = cleanBefore
+                ? '<span>✨</span> Clean &amp; Xuất file Word (.docx OMML)'
+                : '<span>💾</span> Đặt tên file Word (.docx OMML)';
+
+            const textValue = document.getElementById('markdownInput').value.trim();
+            const firstLine = textValue.split('\n')[0].replace(/[#*_`]/g, '').trim() || 'Tai_Lieu';
+            const defaultFileName = `Markdown2Word_${firstLine.substring(0, 30).replace(/\s+/g, '_')}`;
+
+            const inputEl = document.getElementById('fileNameInput');
+            inputEl.value = defaultFileName;
+            toggleModal('modalExportName', true);
+
+            setTimeout(() => {
+                inputEl.focus();
+                inputEl.select();
+            }, 10);
+        }
+
+        async function confirmExportToWord() {
+            let customName = document.getElementById('fileNameInput').value.trim();
+            if (!customName) customName = 'Markdown2Word_Document';
+            if (!customName.toLowerCase().endsWith('.docx')) customName += '.docx';
+
+            toggleModal('modalExportName', false);
+
+            const previewEl = document.getElementById('preview');
+            applySpacePreference();
+
+            try {
+                const docxBlob = await generateNativeOmMlDocxBlob(previewEl, shouldCleanBeforeExport);
+                const url = URL.createObjectURL(docxBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = customName;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                showToast(
+                    shouldCleanBeforeExport
+                        ? `Đã dọn khoảng trắng & xuất "${customName}" (OMML chuẩn) thành công!`
+                        : `Đã xuất file "${customName}" (OMML chuẩn) thành công!`
+                );
+            } catch (err) {
+                console.error('Lỗi xuất docx OMML:', err);
+                showToast('Lỗi khi tạo cấu trúc OpenXML .docx, vui lòng thử lại!', 'error');
+            } finally {
+                shouldCleanBeforeExport = false;
+            }
+        }
+    </script>
+</body>
+</html>
